@@ -2,7 +2,7 @@ import os
 import pygame
 
 # Change the current working directory to the directory where your game files are located
-os.chdir("/home/gabriel-waters/Documents")
+#os.chdir("/home/gabriel-waters/Documents")
 
 # Initialize Pygame
 pygame.init()
@@ -36,11 +36,12 @@ spaceship_image = pygame.transform.scale(spaceship_image, (190, 100))  # Resize 
 initial_character_x = 50
 initial_character_y = screen_height - 100  # Start above the ground line
 initial_character_y_velocity = 0
-gravity = 0.5  # Gravity
-jump_strength = -15  # Jump strength
+gravity = 0.8  # Change gravity to 0.8
+jump_strength = -15  # Change jump strength to -15
 
 # Set the initial position of the spaceship
 spaceship_x = background_width
+spaceship_y = screen_height - 300  # Set the spaceship's y position
 
 # Set the speed of the spaceship
 spaceship_speed = 5
@@ -49,29 +50,27 @@ spaceship_speed = 5
 clock = pygame.time.Clock()
 fps = 30  # Set the frame rate to 30 FPS
 
-# Set up the lines
-line_y = screen_height - 250  # Move the line higher
-line_thickness = 5
+# Set up the ground
 ground_y = screen_height - 50
 
 # Function to display the "Game Over" message
-#def display_game_over():
-    #font = pygame.font.Font(None, 74)
-    #text = font.render("Game Over", True, (255, 0, 0))
-    #screen.blit(text, (background_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
-    #pygame.display.flip()
+def display_game_over():
+    font = pygame.font.Font(None, 74)
+    text = font.render("Game Over", True, (255, 0, 0))
+    screen.blit(text, (background_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
+    pygame.display.flip()
 
 # Function to reset the game state
 def reset_game():
-    global character_x, character_y, character_y_velocity, gravity_enabled, flipped, game_over, touching_line, hit_line, spaceship_x
+    global character_x, character_y, character_y_velocity, gravity_enabled, flipped, game_over, touching_spaceship, hit_spaceship, spaceship_x
     character_x = initial_character_x
     character_y = initial_character_y
     character_y_velocity = initial_character_y_velocity
     gravity_enabled = True
     flipped = False
     game_over = False
-    touching_line = False
-    hit_line = False
+    touching_spaceship = False
+    hit_spaceship = False
     spaceship_x = background_width
     # Reset the character image to its original orientation
     global character_image
@@ -89,9 +88,10 @@ while running:
             running = False
         if event.type == pygame.KEYDOWN and not game_over:
             if event.key == pygame.K_SPACE:
-                if touching_line:
-                    touching_line = True  # Allow the character to drop back down to the ground
-                    character_y_velocity = 5 # Reset the velocity
+                if touching_spaceship:
+                    touching_spaceship = False  # Allow the character to drop back down to the ground
+                    character_y_velocity = 5  # Reset the velocity
+                    character_y += 20  # Move the character further down to avoid immediate collision
                     if flipped:
                         character_image = pygame.transform.flip(character_image, False, True)  # Flip the character back to original orientation
                         flipped = False
@@ -101,9 +101,10 @@ while running:
                     character_y_velocity = jump_strength  # Allow jump only if gravity is enabled
                     print("Character jumps with velocity:", character_y_velocity)
             if event.key == pygame.K_DOWN:
-                if touching_line:
-                    touching_line = False # Allow the character to drop back down to the ground
+                if touching_spaceship:
+                    touching_spaceship = False  # Allow the character to drop back down to the ground
                     character_y_velocity = 5  # Reset the velocity
+                    character_y += 20  # Move the character further down to avoid immediate collision
                     if flipped:
                         character_image = pygame.transform.flip(character_image, False, True)  # Flip the character back to original orientation
                         flipped = False
@@ -135,45 +136,43 @@ while running:
 
         # Create rectangles for collision points
         character_rect = pygame.Rect(character_x, character_y, 75, 75)
-        top_right_rect = pygame.Rect(character_x + 75, character_y, 1, 1)
-        bottom_right_rect = pygame.Rect(character_x + 75, character_y + 75, 1, 1)
-        bottom_left_rect = pygame.Rect(character_x, character_y + 75, 1, 1)
+        spaceship_rect = pygame.Rect(spaceship_x, spaceship_y, 190, 100)
 
-        # Check for collision with the line
-        line_rect = pygame.Rect(0, line_y, background_width, line_thickness)
-        if (character_rect.colliderect(line_rect) or
-            top_right_rect.colliderect(line_rect) or
-            bottom_right_rect.colliderect(line_rect) or
-            bottom_left_rect.colliderect(line_rect)):
-            character_y = line_y  # Ensure the top of the character is exactly at the top of the line
-            character_y_velocity = 0
-            if not hit_line:
-                hit_line = True
-                print("Character hit the line")
-            touching_line = True
-            print("Character is touching the line")
-            if not flipped:
-                character_image = pygame.transform.flip(character_image, False, True)  # Flip the character upside down
-                flipped = True
-                print("Character flipped upside down")
-        else:
-            if touching_line:
-                touching_line = False
-                hit_line = False
-                print("Character is no longer touching the line")
-                if flipped:
-                    character_image = pygame.transform.flip(character_image, False, True)  # Flip the character back to original orientation
-                    flipped = False
-                    print("Character flipped back to original orientation")
+        # Draw the collision boxes
+        pygame.draw.rect(screen, (0, 255, 0), character_rect)  # Draw filled character collision box in green
+        pygame.draw.rect(screen, (0, 255, 0), spaceship_rect)  # Draw filled spaceship collision box in green
 
     # Draw the background image on the screen
     screen.blit(background_image, (0, 0))
 
     # Draw the spaceship image on the screen
-    screen.blit(spaceship_image, (spaceship_x, line_y - 50))  # Move the spaceship slightly above the line
+    screen.blit(spaceship_image, (spaceship_x, spaceship_y))  # Move the spaceship slightly above the line
 
     # Draw the character image on the screen
     screen.blit(character_image, (character_x, character_y))
+
+    # Check for collision with the spaceship
+    if character_rect.colliderect(spaceship_rect):
+        character_y = spaceship_rect.bottom - 55  # Ensure the bottom of the character is lower at the bottom of the spaceship
+        character_y_velocity = 0
+        if not hit_spaceship:
+            hit_spaceship = True
+            print("Character hit the spaceship")
+        touching_spaceship = True
+        print("Character is touching the spaceship")
+        if not flipped:
+            character_image = pygame.transform.flip(character_image, False, True)  # Flip the character upside down
+            flipped = True
+            print("Character flipped upside down")
+    else:
+        if touching_spaceship:
+            touching_spaceship = False
+            hit_spaceship = False
+            print("Character is no longer touching the spaceship")
+            if flipped:
+                character_image = pygame.transform.flip(character_image, False, True)  # Flip the character back to original orientation
+                flipped = False
+                print("Character flipped back to original orientation")
 
     if game_over:
         display_game_over()
